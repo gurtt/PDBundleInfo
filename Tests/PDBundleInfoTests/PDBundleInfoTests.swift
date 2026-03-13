@@ -109,6 +109,16 @@ struct EscapedTests {
 	}
 }
 
+@Suite("Playdate Epoch")
+struct PlaydateEpochTests {
+	@Test func epochSecondsIsReasonable() {
+		let seconds = PDBundleInfoGenerator.playdateEpochSeconds
+		// Jan 1 2026 is ~820M seconds after Playdate epoch; sanity-check we're in the right ballpark.
+		#expect(seconds > 800_000_000)
+		#expect(seconds < 2_000_000_000)
+	}
+}
+
 @Suite("Code Generation")
 struct GenerateTests {
 	@Test func producesExpectedProperties() throws {
@@ -150,4 +160,18 @@ struct GenerateTests {
 		let output = try PDBundleInfoGenerator.generate(from: [:])
 		#expect(output.contains("Auto-generated from pdxinfo"))
 	}
+
+	#if ENABLE_BUILD_TIME
+		@Test func buildTimeIncluded() throws {
+			let output = try PDBundleInfoGenerator.generate(from: ["name": "My Game"])
+			#expect(output.contains("public static let buildTime: Int ="))
+		}
+
+		@Test func buildTimeKeyCollisionThrows() {
+			let entries = ["buildTime": "12345"]
+			#expect(throws: PDBundleInfoGenerator.GeneratorError.self) {
+				try PDBundleInfoGenerator.generate(from: entries)
+			}
+		}
+	#endif
 }

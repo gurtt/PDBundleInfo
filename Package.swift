@@ -11,6 +11,13 @@ let package = Package(
 			targets: ["PDBundleInfo"]
 		)
 	],
+	traits: [
+		.trait(
+			name: "BuildTime",
+			description:
+				"Include a buildTime property with seconds since the Playdate epoch (Jan 1, 2000)."
+		)
+	],
 	dependencies: [
 		.package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0"),
 		.package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
@@ -27,11 +34,17 @@ let package = Package(
 				.product(name: "SwiftSyntax", package: "swift-syntax"),
 				.product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
 				.product(name: "ArgumentParser", package: "swift-argument-parser"),
+			],
+			swiftSettings: [
+				.define("ENABLE_BUILD_TIME", .when(traits: ["BuildTime"]))
 			]
 		),
 		.testTarget(
 			name: "PDBundleInfoTests",
-			dependencies: ["PDBundleInfoGenerator"]
+			dependencies: ["PDBundleInfoGenerator"],
+			swiftSettings: [
+				.define("ENABLE_BUILD_TIME", .when(traits: ["BuildTime"]))
+			]
 		),
 	]
 )

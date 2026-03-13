@@ -68,6 +68,21 @@ struct PDBundleInfoGenerator: ParsableCommand {
 		return entries
 	}
 
+	/// Prints a warning message to stderr.
+	private static func printWarning(_ message: String) {
+		FileHandle.standardError.write(Data("warning: \(message)\n".utf8))
+	}
+
+	// MARK: - Playdate Epoch
+
+	/// Seconds between the Playdate epoch (Jan 1, 2000) and the Core Data epoch (Jan 1, 2001).
+	private static let playdateEpochOffset: TimeInterval = 366 * 86400  // 2000 was a leap year
+
+	/// The current time expressed as seconds since the Playdate epoch (Jan 1, 2000).
+	static var playdateEpochSeconds: Int {
+		Int(Date().timeIntervalSinceReferenceDate + playdateEpochOffset)
+	}
+
 	// MARK: - Code Generation
 
 	/// Errors thrown during generation.
@@ -75,10 +90,15 @@ struct PDBundleInfoGenerator: ParsableCommand {
 		/// An error that's thrown when the parsed `buildNumber` isn't a valid integer.
 		case invalidBuildNumber(String)
 
+		/// An error that's thrown when a parsed info item collides with an auto-generated one.
+		case keyCollision(String)
+
 		var description: String {
 			switch self {
 				case .invalidBuildNumber(let value):
 					"buildNumber '\(value)' isn't a valid integer."
+				case .keyCollision(let key):
+					"key '\(key)' in pdxinfo collides with a generated key of the same name."
 			}
 		}
 	}
@@ -94,9 +114,20 @@ struct PDBundleInfoGenerator: ParsableCommand {
 			buildNumber = intVal
 		}
 
+		// verify buildTime won't collide with a user-provided property
+		#if ENABLE_BUILD_TIME
+			if entries["buildTime"] != nil {
+				throw GeneratorError.keyCollision("buildTime")
+			}
+		#endif
+
 		let sortedEntries = entries.sorted(by: { $0.key < $1.key })
 
 		let enumDecl = try EnumDeclSyntax("public enum PDBundle") {
+			#if ENABLE_BUILD_TIME
+				DeclSyntax("public static let buildTime: Int = \(raw: Self.playdateEpochSeconds)")
+			#endif
+
 			for (key, value) in sortedEntries {
 				let name = knownKeys.contains(key) ? key : key.sanitisedIdentifier
 

@@ -39,6 +39,16 @@ if PDBundle.buildNumber < 10 {
 
 Any unrecognised keys are sanitised into valid Swift identifiers.
 
+### Build time
+
+You can optionally access a generated `buildTime` property by enabling the `BuildTime` trait:
+
+```swift
+.package(url: "https://github.com/gurtt/PDBundleInfo", from: "1.0.0", traits: ["BuildTime"])
+```
+
+The time is expressed as the number of seconds since 1 January, 2000 (the Playdate epoch).
+
 ## Where to put `pdxinfo`
 
 The plugin searches for `pdxinfo` relative to the target's source directory, in order:
