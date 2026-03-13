@@ -1,7 +1,5 @@
 import ArgumentParser
 import Foundation
-import SwiftSyntax
-import SwiftSyntaxBuilder
 
 @main
 struct PDBundleInfoGenerator: ParsableCommand {
@@ -123,31 +121,30 @@ struct PDBundleInfoGenerator: ParsableCommand {
 
 		let sortedEntries = entries.sorted(by: { $0.key < $1.key })
 
-		let enumDecl = try EnumDeclSyntax("public enum PDBundle") {
-			#if ENABLE_BUILD_TIME
-				DeclSyntax("public static let buildTime: Int = \(raw: Self.playdateEpochSeconds)")
-			#endif
+		var lines: [String] = []
+		lines.append("// Auto-generated from pdxinfo - don't edit this file.")
+		lines.append("")
+		lines.append("/// Metadata about this bundle.")
+		lines.append("public enum PDBundle {")
 
-			for (key, value) in sortedEntries {
-				let name = knownKeys.contains(key) ? key : key.sanitisedIdentifier
+		#if ENABLE_BUILD_TIME
+			lines.append("\tpublic static let buildTime: Int = \(Self.playdateEpochSeconds)")
+		#endif
 
-				if key == "buildNumber", let intVal = buildNumber {
-					DeclSyntax("public static let \(raw: name): Int = \(raw: intVal)")
-				} else {
-					let escapedValue = value.escapedForStringLiteral
-					DeclSyntax("public static let \(raw: name) = \"\(raw: escapedValue)\"")
-				}
+		for (key, value) in sortedEntries {
+			let name = knownKeys.contains(key) ? key : key.sanitisedIdentifier
+
+			if key == "buildNumber", let intVal = buildNumber {
+				lines.append("\tpublic static let \(name): Int = \(intVal)")
+			} else {
+				let escapedValue = value.escapedForStringLiteral
+				lines.append("\tpublic static let \(name) = \"\(escapedValue)\"")
 			}
 		}
 
-		let header: Trivia = [
-			.lineComment("// Auto-generated from pdxinfo — don't edit this file."),
-			.newlines(2),
-			.docLineComment("/// Metadata about this bundle."),
-			.newlines(1),
-		]
+		lines.append("}")
+		lines.append("")
 
-		let source = enumDecl.with(\.leadingTrivia, header)
-		return source.formatted().description + "\n"
+		return lines.joined(separator: "\n")
 	}
 }
