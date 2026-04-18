@@ -18,9 +18,6 @@ let package = Package(
 				"Include a buildTime property with seconds since the Playdate epoch (Jan 1, 2000)."
 		)
 	],
-	dependencies: [
-		.package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
-	],
 	targets: [
 		.plugin(
 			name: "PDBundleInfo",
@@ -29,9 +26,6 @@ let package = Package(
 		),
 		.executableTarget(
 			name: "PDBundleInfoGenerator",
-			dependencies: [
-				.product(name: "ArgumentParser", package: "swift-argument-parser"),
-			],
 			swiftSettings: [
 				.define("ENABLE_BUILD_TIME", .when(traits: ["BuildTime"]))
 			]

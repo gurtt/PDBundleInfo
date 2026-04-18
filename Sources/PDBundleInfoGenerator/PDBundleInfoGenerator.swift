@@ -1,18 +1,7 @@
-import ArgumentParser
 import Foundation
 
 @main
-struct PDBundleInfoGenerator: ParsableCommand {
-	static let configuration = CommandConfiguration(
-		abstract: "Generate a PDBundle enum from a Playdate pdxinfo file."
-	)
-
-	@Argument(help: "Path to the input pdxinfo file.")
-	var input: String
-
-	@Argument(help: "Path to the output Swift file.")
-	var output: String
-
+struct PDBundleInfoGenerator {
 	/// Known pdxinfo keys that map directly to camelCase Swift property names.
 	static let knownKeys: Set<String> = [
 		"name",
@@ -27,27 +16,40 @@ struct PDBundleInfoGenerator: ParsableCommand {
 		"contentWarning2",
 	]
 
-	func validate() throws {
+	static func main() {
+		let args = CommandLine.arguments.dropFirst()
+		guard args.count == 2 else {
+			FileHandle.standardError.write(Data(
+				"usage: PDBundleInfoGenerator <input-pdxinfo> <output-swift>\n".utf8
+			))
+			exit(64)
+		}
+		let input = args[args.startIndex]
+		let output = args[args.startIndex + 1]
+
 		let inputURL = URL(fileURLWithPath: input)
 		guard FileManager.default.fileExists(atPath: inputURL.path) else {
-			throw ValidationError("No pdxinfo file found at '\(input)'.")
+			FileHandle.standardError.write(Data(
+				"error: No pdxinfo file found at '\(input)'.\n".utf8
+			))
+			exit(1)
 		}
-	}
 
-	func run() throws {
-		let inputURL = URL(fileURLWithPath: input)
-		let outputURL = URL(fileURLWithPath: output)
+		do {
+			let outputURL = URL(fileURLWithPath: output)
+			let contents = try String(contentsOf: inputURL, encoding: .utf8)
+			let entries = parse(contents)
+			let swift = try generate(from: entries)
 
-		let contents = try String(contentsOf: inputURL, encoding: .utf8)
-		let entries = Self.parse(contents)
-
-		let swift = try Self.generate(from: entries)
-
-		try FileManager.default.createDirectory(
-			at: outputURL.deletingLastPathComponent(),
-			withIntermediateDirectories: true
-		)
-		try swift.write(to: outputURL, atomically: true, encoding: .utf8)
+			try FileManager.default.createDirectory(
+				at: outputURL.deletingLastPathComponent(),
+				withIntermediateDirectories: true
+			)
+			try swift.write(to: outputURL, atomically: true, encoding: .utf8)
+		} catch {
+			FileHandle.standardError.write(Data("error: \(error)\n".utf8))
+			exit(1)
+		}
 	}
 
 	// MARK: - Parsing
